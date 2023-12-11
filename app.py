@@ -2,14 +2,16 @@ import streamlit as st
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
+from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings, HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain, LLMChain
 from htmlTemplates import css, bot_template, user_template
 from langchain.llms import HuggingFaceHub, Cohere
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
+
+from src.constants import KNOWLEDGE_PATH
 
 from src.utils import (
     get_base_knowledge, process_pdfs,
@@ -26,10 +28,6 @@ def get_conversation_chain(vectorstore):
     #         "max_length": 2048,
     #     }
     # )
-    prompt = """
-    You are an expert data scientist with an expertise in building deep learning models.
-    Answer the question in a few lines.
-    """
 
     llm = Cohere(temperature=0.8, max_tokens=2048)
 
@@ -100,7 +98,7 @@ def main():
             "\nNOTE: If you click 'Replace', you will replace the existing knowledge base.", accept_multiple_files=True)
         if st.button("Add"):
             with st.spinner("Processing"):
-                vectorstore = add_new_pdfs(vectorstore=vectorstore, pdf_files=pdf_docs, save_path='base_knowledge')
+                vectorstore = add_new_pdfs(vectorstore=vectorstore, pdf_files=pdf_docs, save_path=KNOWLEDGE_PATH)
                 print('new vectorstore added')
 
                 # create conversation chain
@@ -108,7 +106,7 @@ def main():
                     vectorstore)
         if st.button("Replace"):
             with st.spinner("Processing"):
-                vectorstore = process_pdfs(pdf_docs, save_path='base_knowledge')
+                vectorstore = process_pdfs(pdf_docs, save_path=KNOWLEDGE_PATH)
                 # create conversation chain
                 st.session_state.conversation = get_conversation_chain(
                     vectorstore)

@@ -1,13 +1,15 @@
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
+from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings, HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
 from langchain.llms import HuggingFaceHub
+
+from src.constants import KNOWLEDGE_PATH
 
 import os
 
@@ -32,9 +34,19 @@ def get_text_chunks(text):
     return chunks
 
 
-def get_vectorstore(text_chunks):
+def get_embedding():
     # embeddings = OpenAIEmbeddings()
-    embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
+    # embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-mpnet-base-v2",
+        # model_kwargs=model_kwargs,
+        encode_kwargs={'normalize_embeddings': True}
+    )
+    return embeddings
+
+
+def get_vectorstore(text_chunks):
+    embeddings = get_embedding()
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     return vectorstore
 
@@ -57,11 +69,11 @@ def add_new_pdfs(vectorstore, pdf_files, save_path=None):
     return vectorstore
 
 
-def get_base_knowledge(pdf_folder_path='data', knowledge_folder_path='base_knowledge'):
+def get_base_knowledge(pdf_folder_path='data', knowledge_folder_path=KNOWLEDGE_PATH):
     if knowledge_folder_path:
         try:
             print('loading existing knowledge base')
-            embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
+            embeddings = get_embedding()
             vectorstore = FAISS.load_local(folder_path=knowledge_folder_path, embeddings=embeddings)
         except:
             print('fetching the pdfs')
